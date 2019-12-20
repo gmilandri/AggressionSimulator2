@@ -210,6 +210,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 37cf230b7029ba94582c7d10853f2bdb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  OnFoodEaten:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &609893967
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -222,16 +225,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a5fd81492abd674884b19b4bf8359e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_floorSize: 100
+  m_floorSize: 10
   m_popPrefab: {fileID: 8528837720085214103, guid: e83451c99a68e584db71e25bcd9a3355,
     type: 3}
   m_foodPrefab: {fileID: 6709032981560332935, guid: d049523e6c4340649988ed17d9c54afb,
     type: 3}
-  StartingPops: 500
-  StartingFood: 1000
+  StartingPops: 10
+  StartingFood: 30
   FoodObjectPool: []
   FoodPool: []
   PopPool: []
+  SpeedFactor: 10
+  DoveMaterial: {fileID: 2100000, guid: f06d4a1b4e42927488b46fcebe270908, type: 2}
+  HawkMaterial: {fileID: 2100000, guid: d700e21414b63854c8ee7e582c2741e0, type: 2}
   timeScale: 1
 --- !u!4 &609893968
 Transform:
@@ -507,13 +513,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: 0.26627216, y: -0, z: -0, w: 0.96389794}
+  m_LocalPosition: {x: 53.6, y: 21, z: -14.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 30.885002, y: 0, z: 0}
 --- !u!1 &1919224392
 GameObject:
   m_ObjectHideFlags: 0

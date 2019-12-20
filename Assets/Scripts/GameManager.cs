@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -25,9 +26,15 @@ public class GameManager : Singleton<GameManager>
     public Pop[] PopPool;
 
     private const int m_MaxPops = 1000;
+    public int SpeedFactor = 2;
+
+    public Material DoveMaterial;
+    public Material HawkMaterial;
 
     [Range(0f, 10f)]
     public float timeScale = 1f;
+
+    private int m_startIndex = 0;
 
 
     void Start()
@@ -41,6 +48,8 @@ public class GameManager : Singleton<GameManager>
         FoodObjectPool = new GameObject[StartingFood];
         PopPool = new Pop[m_MaxPops];
 
+        EventManager.Instance.OnFoodEaten.AddListener(m_gameManager_FoodEaten);
+
         InizializeNavMesh();
         PlaceFood();
         PlacePops();
@@ -50,12 +59,18 @@ public class GameManager : Singleton<GameManager>
     void Update()
     {
         Time.timeScale = timeScale;
-        foreach (var pop in PopPool)
+        for (int i = m_startIndex; i < PopPool.Length; i += SpeedFactor)
         {
-            if (pop == null)
+            if (PopPool[i] == null)
                 continue;
-            pop.MyUpdate();
+            if (!PopPool[i].gameObject.activeSelf)
+                continue;
+            PopPool[i].MyUpdate();
         }
+
+        m_startIndex++;
+        if (m_startIndex == SpeedFactor)
+            m_startIndex = 0;
     }
 
     void PlaceFood()
@@ -100,7 +115,7 @@ public class GameManager : Singleton<GameManager>
         return destination;
     }
 
-    public void RespawnFood(Vector2 eatenFood)
+    private void RespawnFood(Vector2 eatenFood)
     {
         for (int i = 0; i < FoodPool.Length; i++)
         {
@@ -112,4 +127,48 @@ public class GameManager : Singleton<GameManager>
             }
         }
     }
+
+    void m_gameManager_FoodEaten(Vector2 foodPos)
+    {
+        foreach (var pop in PopPool)
+        {
+            if (pop == null)
+                continue;
+            if (!pop.gameObject.activeSelf)
+                continue;
+            if (pop.MyDestination == foodPos)
+                pop.ResetTarget();
+        }
+        RespawnFood(foodPos);
+    }
+
+    public void CreateNewPop(Pop original)
+    {
+        Transform parent = GameObject.Find("PopParent").transform;
+        var createdPop = false;
+        foreach (var pop in PopPool)
+        {
+            if (pop != null && !pop.gameObject.activeSelf)
+            {
+                pop.gameObject.SetActive(true);
+                pop.transform.position = original.transform.position;
+                pop.SetDestination();
+                createdPop = true;
+                break;
+            }
+        }
+        if (!createdPop)
+        {
+            for (int i= 0; i < PopPool.Length; i++)
+            {
+                if (PopPool[i] == null)
+                {
+                    PopPool[i] = Instantiate(m_popPrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                    break;
+                }
+            }
+        }
+    }
+
+
 }
