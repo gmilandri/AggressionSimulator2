@@ -15,9 +15,6 @@ public class GameManager : Singleton<GameManager>
     private GameObject m_foodPrefab;
     private float m_squareSize;
 
-    public int StartingPops = 0;
-    public int StartingFood = 0;
-
     public float GetMaxBoundaries() => m_squareSize;
 
     public GameObject[] FoodObjectPool;
@@ -36,6 +33,15 @@ public class GameManager : Singleton<GameManager>
 
     private int m_startIndex = 0;
 
+    public int TotalFoodBiomass = 200;
+    [HideInInspector]
+    public int AvailableBiomass = 0;
+
+    public int StartingPops = 0;
+    public int FoodPerBamboo = 2;
+    public int StartingFoodPop = 4;
+    public int MinPopSpeed = 4;
+    public int MaxPopSpeed = 8;
 
     void Start()
     {
@@ -44,21 +50,26 @@ public class GameManager : Singleton<GameManager>
         floor.transform.position = new Vector3(m_floorSize * 5, 0, m_floorSize * 5);
         m_squareSize = floor.transform.localScale.x * 10 - 2;
 
-        FoodPool = new Vector2[StartingFood];
-        FoodObjectPool = new GameObject[StartingFood];
+        FoodPool = new Vector2[TotalFoodBiomass / FoodPerBamboo];
+        FoodObjectPool = new GameObject[TotalFoodBiomass / FoodPerBamboo];
         PopPool = new Pop[m_MaxPops];
 
         EventManager.Instance.OnFoodEaten.AddListener(m_gameManager_FoodEaten);
 
+        AvailableBiomass = TotalFoodBiomass;
+
         InizializeNavMesh();
-        PlaceFood();
         PlacePops();
+        PlaceFood();
     }
 
-    // Update is called once per frame
     void Update()
     {
         Time.timeScale = timeScale;
+
+        if (AvailableBiomass >= FoodPerBamboo)
+            RespawnFood();
+
         for (int i = m_startIndex; i < PopPool.Length; i += SpeedFactor)
         {
             if (PopPool[i] == null)
@@ -76,10 +87,20 @@ public class GameManager : Singleton<GameManager>
     void PlaceFood()
     {
         Transform parent = GameObject.Find("FoodParent").transform;
+
         for (int i = 0; i < FoodPool.Length; i++)
         {
             FoodObjectPool[i] = Instantiate(m_foodPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent);
-            FoodPool[i] = new Vector2(FoodObjectPool[i].transform.position.x, FoodObjectPool[i].transform.position.z);    
+            if (AvailableBiomass >= FoodPerBamboo)
+            {
+                FoodPool[i] = new Vector2(FoodObjectPool[i].transform.position.x, FoodObjectPool[i].transform.position.z);
+                AvailableBiomass -= FoodPerBamboo;
+            }
+            else
+            {
+                FoodObjectPool[i].SetActive(false);
+                FoodPool[i] = Vector2.zero;
+            }
         }
     }
 
@@ -88,7 +109,9 @@ public class GameManager : Singleton<GameManager>
         Transform parent = GameObject.Find("PopParent").transform;
         for (int i = 0; i < StartingPops; i++)
         {
+            AvailableBiomass -= StartingFoodPop;
             PopPool[i] = Instantiate(m_popPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
+            PopPool[i].gameObject.name = "Pop n." + i.ToString();
         }
     }
 
@@ -104,6 +127,8 @@ public class GameManager : Singleton<GameManager>
 
         foreach (var food in FoodPool)
         {
+            if (food == Vector2.zero)
+                continue;
             var distance = Vector2.Distance(origin, food);
             if (distance < minDistance)
             {
@@ -115,12 +140,27 @@ public class GameManager : Singleton<GameManager>
         return destination;
     }
 
-    private void RespawnFood(Vector2 eatenFood)
+    private void DespawnFood(Vector2 eatenFood)
     {
         for (int i = 0; i < FoodPool.Length; i++)
         {
             if (FoodPool[i] == eatenFood)
             {
+                FoodObjectPool[i].SetActive(false);
+                FoodPool[i] = Vector2.zero;
+                break;
+            }
+        }
+    }
+
+    private void RespawnFood()
+    {
+        AvailableBiomass -= FoodPerBamboo;
+        for (int i = 0; i < FoodPool.Length; i++)
+        {
+            if (FoodPool[i] == Vector2.zero)
+            {
+                FoodObjectPool[i].SetActive(true);
                 FoodObjectPool[i].transform.position = new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries()));
                 FoodPool[i] = new Vector2(FoodObjectPool[i].transform.position.x, FoodObjectPool[i].transform.position.z);
                 break;
@@ -130,6 +170,8 @@ public class GameManager : Singleton<GameManager>
 
     void m_gameManager_FoodEaten(Vector2 foodPos)
     {
+        DespawnFood(foodPos);
+
         foreach (var pop in PopPool)
         {
             if (pop == null)
@@ -139,7 +181,6 @@ public class GameManager : Singleton<GameManager>
             if (pop.MyDestination == foodPos)
                 pop.ResetTarget();
         }
-        RespawnFood(foodPos);
     }
 
     public void CreateNewPop(Pop original)
@@ -152,7 +193,8 @@ public class GameManager : Singleton<GameManager>
             {
                 pop.gameObject.SetActive(true);
                 pop.transform.position = original.transform.position;
-                pop.SetDestination();
+                pop.ResetTarget();
+                //pop.SetDestination();
                 createdPop = true;
                 break;
             }
@@ -164,6 +206,7 @@ public class GameManager : Singleton<GameManager>
                 if (PopPool[i] == null)
                 {
                     PopPool[i] = Instantiate(m_popPrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                    PopPool[i].gameObject.name = "Pop n." + i.ToString();
                     break;
                 }
             }

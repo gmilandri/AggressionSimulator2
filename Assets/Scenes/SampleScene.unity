@@ -230,8 +230,6 @@ MonoBehaviour:
     type: 3}
   m_foodPrefab: {fileID: 6709032981560332935, guid: d049523e6c4340649988ed17d9c54afb,
     type: 3}
-  StartingPops: 10
-  StartingFood: 30
   FoodObjectPool: []
   FoodPool: []
   PopPool: []
@@ -239,6 +237,13 @@ MonoBehaviour:
   DoveMaterial: {fileID: 2100000, guid: f06d4a1b4e42927488b46fcebe270908, type: 2}
   HawkMaterial: {fileID: 2100000, guid: d700e21414b63854c8ee7e582c2741e0, type: 2}
   timeScale: 1
+  TotalFoodBiomass: 1000
+  AvailableBiomass: 0
+  StartingPops: 1
+  FoodPerBamboo: 2
+  StartingFoodPop: 10
+  MinPopSpeed: 2
+  MaxPopSpeed: 12
 --- !u!4 &609893968
 Transform:
   m_ObjectHideFlags: 0

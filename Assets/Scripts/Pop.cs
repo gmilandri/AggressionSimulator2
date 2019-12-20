@@ -5,26 +5,26 @@ using UnityEngine.AI;
 
 public class Pop : MonoBehaviour
 {
-    [SerializeField]
-    private int m_Energy;
     private NavMeshAgent m_agent;
     public Vector2 MyPos;
     public Vector2 MyDestination;
 
-    private int m_energyTickSpeed;
-    private int m_countdownEnergyCheck;
+    public EnergyPop m_Energy;
+
+    private void Awake()
+    {
+        m_Energy = new EnergyPop(GameManager.Instance.StartingFoodPop, Random.Range(5, 15));
+        m_agent = GetComponent<NavMeshAgent>();
+        m_agent.speed = Random.Range(GameManager.Instance.MinPopSpeed, GameManager.Instance.MaxPopSpeed);
+        GetComponent<Renderer>().material = GameManager.Instance.DoveMaterial;
+    }
 
     void Start()
-    {
-        m_agent = GetComponent<NavMeshAgent>();
+    {      
         m_agent.enabled = true;
-        m_agent.speed = Random.Range(8f, 24f);
-        GetComponent<Renderer>().material = GameManager.Instance.DoveMaterial;
         MyDestination = Vector2.zero;
         MyPos = new Vector2(transform.position.x, transform.position.z);
-        m_Energy = 10;
-        m_energyTickSpeed = Random.Range(5,15);
-        m_countdownEnergyCheck = m_energyTickSpeed;
+
         SetDestination();
     }
 
@@ -34,16 +34,17 @@ public class Pop : MonoBehaviour
 
         if (m_distanceFromFood < 0.5f)
         {
-            m_Energy += 2;
+            m_Energy.IncreaseEnergy(GameManager.Instance.FoodPerBamboo);
+            ResetTarget();
             EventManager.Instance.OnFoodEaten.Invoke(MyDestination);
         }
 
-        m_countdownEnergyCheck--;
-        if (m_countdownEnergyCheck == 0)
-        {
+        m_Energy.TimeTick();
+        if (m_Energy.CountdownHasEnded)
+        {           
+            m_Energy.EnergyTick();
+            m_Energy.ResetCountdown();
             CheckStatus();
-            m_Energy--;
-            m_countdownEnergyCheck = m_energyTickSpeed;
         }
 
     }
@@ -67,22 +68,20 @@ public class Pop : MonoBehaviour
 
     private void CheckStatus()
     {
-        if (m_Energy <= 0)
+        if (m_Energy.EnergyEnded)
             ResetSelf();
-        if (m_Energy > 30)
+        if (m_Energy.EnergyHigherThan(20))
         {
-            m_Energy -= 20;
+            m_Energy.DecreaseEnergyBy(GameManager.Instance.StartingFoodPop);
             GameManager.Instance.CreateNewPop(this);
         }
     }
 
     private void ResetSelf()
     {
-        m_energyTickSpeed = Random.Range(5, 15);
-        m_countdownEnergyCheck = m_energyTickSpeed;
-        m_Energy = 10;
+        m_Energy.ResetValues(GameManager.Instance.StartingFoodPop, Random.Range(5, 15));
         MyDestination = Vector2.zero;
-        m_agent.speed = Random.Range(8f, 24f);
+        m_agent.speed = Random.Range(GameManager.Instance.MinPopSpeed, GameManager.Instance.MaxPopSpeed);
         gameObject.SetActive(false);
     }
 }
