@@ -107,8 +107,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f1d677836d0c36498c57ec1df92d305, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_agent: {fileID: 0}
   MyPos: {x: 0, y: 0}
   MyDestination: {x: 0, y: 0}
+  m_gameManager: {fileID: 0}
 --- !u!195 &5355042268089483440
 NavMeshAgent:
   m_ObjectHideFlags: 0

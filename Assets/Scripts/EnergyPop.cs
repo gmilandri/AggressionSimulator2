@@ -23,6 +23,7 @@ public class EnergyPop
     public bool EnergyEnded => Energy <= GameManager.Instance.MinimumPopEnergy ? true : false;
     public bool EnergyHigherThan(int amount) => Energy >= amount ? true : false;
     public void DecreaseEnergyBy(int amount) => Energy -= amount;
+    public void ResetEnergy() => Energy = GameManager.Instance.MinimumPopEnergy;
 
     public void ResetValues(int Energy, int EnergyTickSpeed)
     {

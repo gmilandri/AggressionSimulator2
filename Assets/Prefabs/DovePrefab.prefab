@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: -2367828589935848198}
   m_Layer: 0
   m_Name: DovePrefab
-  m_TagString: Untagged
+  m_TagString: Dove
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -129,5 +129,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2953756e263cae542b8f7f64189c8645, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_agent: {fileID: 0}
   MyPos: {x: 0, y: 0}
   MyDestination: {x: 0, y: 0}
+  m_gameManager: {fileID: 0}

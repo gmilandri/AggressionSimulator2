@@ -16,8 +16,8 @@ public class GameManager : Singleton<GameManager>
 
     public GameObject[] FoodObjectPool;
     public Vector2[] FoodPool;
+    public GameObject[] PopObjectPool;
     public Pop[] PopPool;
-    public Vector2[] PopPosPool;
 
     [Header("Simulation Variables")]
     [SerializeField]
@@ -60,7 +60,7 @@ public class GameManager : Singleton<GameManager>
         FoodObjectPool = new GameObject[TotalFoodBiomass / FoodPerBamboo];
 
         PopPool = new Pop[TotalFoodBiomass / MinimumPopEnergy];
-        PopPosPool = new Vector2[TotalFoodBiomass / MinimumPopEnergy];
+        PopObjectPool = new GameObject[TotalFoodBiomass / MinimumPopEnergy];
 
         EventManager.Instance.OnFoodEaten.AddListener(m_gameManager_FoodEaten);
         EventManager.Instance.OnPopEaten.AddListener(m_gameManager_PopEaten);
@@ -85,7 +85,6 @@ public class GameManager : Singleton<GameManager>
                 continue;
             if (!PopPool[i].gameObject.activeSelf)
                 continue;
-            PopPosPool[i] = PopPool[i].MyPos;
             PopPool[i].MyUpdate();
             
         }
@@ -123,6 +122,7 @@ public class GameManager : Singleton<GameManager>
             m_availableBiomass -= StartingFoodPop;
             PopPool[i] = Instantiate(m_popDovePrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
             PopPool[i].gameObject.name = "Pop n." + i.ToString();
+            PopObjectPool[i] = PopPool[i].gameObject;
         }
     }
 
@@ -151,23 +151,24 @@ public class GameManager : Singleton<GameManager>
         return destination;
     }
 
-    //STILL TOO INACCURATE!
-    public Vector2 ClosestPopDestination(Vector2 origin)
+    public int ClosestPopDestination(Vector3 origin)
     {
         float minDistance = float.MaxValue;
-        Vector2 destination = new Vector2();
+        int destination = -1;
 
-        foreach (var food in PopPosPool)
+        for (int i = 0; i < PopObjectPool.Length; i++)
         {
-            if (food == Vector2.zero)
+            if (PopObjectPool[i] == null)
                 continue;
-            var distance = Vector2.Distance(origin, food);
-            if (distance < 0.5f)
+            if (!PopObjectPool[i].activeSelf)
                 continue;
+            if (origin == PopObjectPool[i].transform.position)
+                continue;
+            var distance = Vector3.Distance(origin, PopObjectPool[i].transform.position);
             if (distance < minDistance)
             {
                 minDistance = distance;
-                destination = food;
+                destination = i;
             }
         }
 
@@ -187,17 +188,9 @@ public class GameManager : Singleton<GameManager>
         }
     }
 
-    private void DespawnPop(Vector2 eatenFood)
+    private void DespawnPop(int eatenFood)
     {
-        for (int i = 0; i < PopPosPool.Length; i++)
-        {
-            if (PopPosPool[i] == eatenFood)
-            {
-                PopPool[i].ResetSelf();
-                PopPosPool[i] = Vector2.zero;
-                break;
-            }
-        }
+        PopPool[eatenFood].ResetSelf();
     }
 
     private void RespawnFood()
@@ -232,21 +225,9 @@ public class GameManager : Singleton<GameManager>
         }
     }
 
-    void m_gameManager_PopEaten(Vector2 foodPos)
+    void m_gameManager_PopEaten(int foodPos)
     {
         DespawnPop(foodPos);
-
-        foreach (var pop in PopPool)
-        {
-            if (pop == null)
-                continue;
-            if (!pop.gameObject.activeSelf)
-                continue;
-            if (pop is Dove)
-                continue;
-            if (pop.MyDestination == foodPos)
-                pop.ResetTarget();
-        }
     }
 
     public void CreateNewPop(Pop original)
@@ -260,7 +241,10 @@ public class GameManager : Singleton<GameManager>
                 if (pop != null && !pop.gameObject.activeSelf && SamePopType(original, pop))
                 {
                     pop.gameObject.SetActive(true);
-                    pop.transform.position = original.transform.position;
+                    if (pop is Dove)
+                        pop.transform.position = original.transform.position;
+                    else
+                        pop.transform.position = new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries()));
                     pop.ResetTarget();
                     createdPop = true;
                     break;
@@ -275,8 +259,9 @@ public class GameManager : Singleton<GameManager>
                         if (original is Dove)
                             PopPool[i] = Instantiate(m_popDovePrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
                         else
-                            PopPool[i] = Instantiate(m_popHawkPrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                            PopPool[i] = Instantiate(m_popHawkPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
                         PopPool[i].gameObject.name = "Pop n." + i.ToString();
+                        PopObjectPool[i] = PopPool[i].gameObject;
                         break;
                     }
                 }
@@ -289,7 +274,10 @@ public class GameManager : Singleton<GameManager>
                 if (pop != null && !pop.gameObject.activeSelf && !SamePopType(original, pop))
                 {
                     pop.gameObject.SetActive(true);
-                    pop.transform.position = original.transform.position;
+                    if (pop is Dove)
+                        pop.transform.position = original.transform.position;
+                    else
+                        pop.transform.position = new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries()));
                     pop.ResetTarget();
                     createdPop = true;
                     break;
@@ -302,10 +290,11 @@ public class GameManager : Singleton<GameManager>
                     if (PopPool[i] == null)
                     {
                         if (original is Dove)
-                            PopPool[i] = Instantiate(m_popHawkPrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                            PopPool[i] = Instantiate(m_popHawkPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
                         else
                             PopPool[i] = Instantiate(m_popDovePrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
                         PopPool[i].gameObject.name = "Pop n." + i.ToString();
+                        PopObjectPool[i] = PopPool[i].gameObject;
                         break;
                     }
                 }
@@ -322,6 +311,6 @@ public class GameManager : Singleton<GameManager>
         return false;
     }
 
-    private bool RandomMutationChance => Random.Range(0, 100) <= MutationChance ? true : false;
+    private bool RandomMutationChance => Random.Range(0, 100) < MutationChance ? true : false;
 
 }

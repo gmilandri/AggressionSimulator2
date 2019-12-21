@@ -19,12 +19,11 @@ public class Pop : MonoBehaviour
         m_Energy = new EnergyPop(m_gameManager.StartingFoodPop, Random.Range(5, 15));
         m_agent = GetComponent<NavMeshAgent>();
         m_agent.speed = Random.Range(m_gameManager.MinPopSpeed, m_gameManager.MaxPopSpeed);
+        m_agent.enabled = true;
     }
 
     void Start()
     {      
-        m_agent.enabled = true;
-
         ResetTarget();
     }
 
@@ -39,9 +38,9 @@ public class Pop : MonoBehaviour
 
     public Vector3 MyDestinationVector3 => new Vector3(MyDestination.x, 0f, MyDestination.y);
 
-    protected float m_distanceFromFood => Vector2.Distance(MyPos, MyDestination);
+    public virtual float DistanceFromFood() => Vector2.Distance(MyPos, MyDestination);
 
-    public void ResetTarget()
+    public virtual void ResetTarget()
     {
         MyDestination = Vector2.zero;
         MyPos = new Vector2(transform.position.x, transform.position.z);
@@ -52,7 +51,7 @@ public class Pop : MonoBehaviour
     {
         if (m_Energy.EnergyEnded)
             ResetSelf();
-        if (m_Energy.EnergyHigherThan(m_gameManager.StartingFoodPop * 2) && this is Dove) //TESTING
+        if (m_Energy.EnergyHigherThan(m_gameManager.StartingFoodPop * 2)) //TESTING
         {
             m_Energy.DecreaseEnergyBy(m_gameManager.StartingFoodPop);
             m_gameManager.CreateNewPop(this);
