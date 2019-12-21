@@ -8,15 +8,16 @@ public class GameManager : Singleton<GameManager>
 {
     [Header("Prefabs and Arrays")]
     [SerializeField]
-    private GameObject m_popPrefab;
+    private GameObject m_popDovePrefab;
+    [SerializeField]
+    private GameObject m_popHawkPrefab;
     [SerializeField]
     private GameObject m_foodPrefab;
-    //public Material DoveMaterial;
-    public Material HawkMaterial;
+
     public GameObject[] FoodObjectPool;
     public Vector2[] FoodPool;
     public Pop[] PopPool;
-
+    public Vector2[] PopPosPool;
 
     [Header("Simulation Variables")]
     [SerializeField]
@@ -28,6 +29,7 @@ public class GameManager : Singleton<GameManager>
     public int MinPopSpeed = 4;
     public int MaxPopSpeed = 8;
     public int MinimumPopEnergy = 5;
+    public int MutationChance = 5;
 
 
     [Header("Performance")]
@@ -58,8 +60,10 @@ public class GameManager : Singleton<GameManager>
         FoodObjectPool = new GameObject[TotalFoodBiomass / FoodPerBamboo];
 
         PopPool = new Pop[TotalFoodBiomass / MinimumPopEnergy];
+        PopPosPool = new Vector2[TotalFoodBiomass / MinimumPopEnergy];
 
         EventManager.Instance.OnFoodEaten.AddListener(m_gameManager_FoodEaten);
+        EventManager.Instance.OnPopEaten.AddListener(m_gameManager_PopEaten);
 
         m_availableBiomass = TotalFoodBiomass;
 
@@ -81,7 +85,9 @@ public class GameManager : Singleton<GameManager>
                 continue;
             if (!PopPool[i].gameObject.activeSelf)
                 continue;
+            PopPosPool[i] = PopPool[i].MyPos;
             PopPool[i].MyUpdate();
+            
         }
 
         m_startIndex++;
@@ -115,7 +121,7 @@ public class GameManager : Singleton<GameManager>
         for (int i = 0; i < StartingPops; i++)
         {
             m_availableBiomass -= StartingFoodPop;
-            PopPool[i] = Instantiate(m_popPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
+            PopPool[i] = Instantiate(m_popDovePrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
             PopPool[i].gameObject.name = "Pop n." + i.ToString();
         }
     }
@@ -125,7 +131,7 @@ public class GameManager : Singleton<GameManager>
         GameObject.Find("NavMesh").GetComponent<NavMeshSurface>().BuildNavMesh();
     }
 
-    public Vector2 ClosestDestination (Vector2 origin)
+    public Vector2 ClosestFoodDestination (Vector2 origin)
     {
         float minDistance = float.MaxValue;
         Vector2 destination = new Vector2();
@@ -145,6 +151,29 @@ public class GameManager : Singleton<GameManager>
         return destination;
     }
 
+    //STILL TOO INACCURATE!
+    public Vector2 ClosestPopDestination(Vector2 origin)
+    {
+        float minDistance = float.MaxValue;
+        Vector2 destination = new Vector2();
+
+        foreach (var food in PopPosPool)
+        {
+            if (food == Vector2.zero)
+                continue;
+            var distance = Vector2.Distance(origin, food);
+            if (distance < 0.5f)
+                continue;
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                destination = food;
+            }
+        }
+
+        return destination;
+    }
+
     private void DespawnFood(Vector2 eatenFood)
     {
         for (int i = 0; i < FoodPool.Length; i++)
@@ -153,6 +182,19 @@ public class GameManager : Singleton<GameManager>
             {
                 FoodObjectPool[i].SetActive(false);
                 FoodPool[i] = Vector2.zero;
+                break;
+            }
+        }
+    }
+
+    private void DespawnPop(Vector2 eatenFood)
+    {
+        for (int i = 0; i < PopPosPool.Length; i++)
+        {
+            if (PopPosPool[i] == eatenFood)
+            {
+                PopPool[i].ResetSelf();
+                PopPosPool[i] = Vector2.zero;
                 break;
             }
         }
@@ -183,6 +225,25 @@ public class GameManager : Singleton<GameManager>
                 continue;
             if (!pop.gameObject.activeSelf)
                 continue;
+            if (pop is Hawk)
+                continue;
+            if (pop.MyDestination == foodPos)
+                pop.ResetTarget();
+        }
+    }
+
+    void m_gameManager_PopEaten(Vector2 foodPos)
+    {
+        DespawnPop(foodPos);
+
+        foreach (var pop in PopPool)
+        {
+            if (pop == null)
+                continue;
+            if (!pop.gameObject.activeSelf)
+                continue;
+            if (pop is Dove)
+                continue;
             if (pop.MyDestination == foodPos)
                 pop.ResetTarget();
         }
@@ -192,31 +253,75 @@ public class GameManager : Singleton<GameManager>
     {
         Transform parent = GameObject.Find("PopParent").transform;
         var createdPop = false;
-        foreach (var pop in PopPool)
+        if (!RandomMutationChance)
         {
-            if (pop != null && !pop.gameObject.activeSelf)
+            foreach (var pop in PopPool)
             {
-                pop.gameObject.SetActive(true);
-                pop.transform.position = original.transform.position;
-                pop.ResetTarget();
-                //pop.SetDestination();
-                createdPop = true;
-                break;
+                if (pop != null && !pop.gameObject.activeSelf && SamePopType(original, pop))
+                {
+                    pop.gameObject.SetActive(true);
+                    pop.transform.position = original.transform.position;
+                    pop.ResetTarget();
+                    createdPop = true;
+                    break;
+                }
+            }
+            if (!createdPop)
+            {
+                for (int i = 0; i < PopPool.Length; i++)
+                {
+                    if (PopPool[i] == null)
+                    {
+                        if (original is Dove)
+                            PopPool[i] = Instantiate(m_popDovePrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                        else
+                            PopPool[i] = Instantiate(m_popHawkPrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                        PopPool[i].gameObject.name = "Pop n." + i.ToString();
+                        break;
+                    }
+                }
             }
         }
-        if (!createdPop)
+        else
         {
-            for (int i= 0; i < PopPool.Length; i++)
+            foreach (var pop in PopPool)
             {
-                if (PopPool[i] == null)
+                if (pop != null && !pop.gameObject.activeSelf && !SamePopType(original, pop))
                 {
-                    PopPool[i] = Instantiate(m_popPrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
-                    PopPool[i].gameObject.name = "Pop n." + i.ToString();
+                    pop.gameObject.SetActive(true);
+                    pop.transform.position = original.transform.position;
+                    pop.ResetTarget();
+                    createdPop = true;
                     break;
+                }
+            }
+            if (!createdPop)
+            {
+                for (int i = 0; i < PopPool.Length; i++)
+                {
+                    if (PopPool[i] == null)
+                    {
+                        if (original is Dove)
+                            PopPool[i] = Instantiate(m_popHawkPrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                        else
+                            PopPool[i] = Instantiate(m_popDovePrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                        PopPool[i].gameObject.name = "Pop n." + i.ToString();
+                        break;
+                    }
                 }
             }
         }
     }
 
+    private bool SamePopType (Pop one, Pop two)
+    {
+        if (one is Dove && two is Dove)
+            return true;
+        if (one is Hawk && two is Hawk)
+            return true;
+        return false;
+    }
+
+    private bool RandomMutationChance => Random.Range(0, 100) <= MutationChance ? true : false;
 
 }

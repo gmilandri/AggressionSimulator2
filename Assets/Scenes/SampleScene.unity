@@ -213,6 +213,9 @@ MonoBehaviour:
   OnFoodEaten:
     m_PersistentCalls:
       m_Calls: []
+  OnPopEaten:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &609893967
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -225,24 +228,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a5fd81492abd674884b19b4bf8359e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_popPrefab: {fileID: 8528837720085214103, guid: e83451c99a68e584db71e25bcd9a3355,
+  m_popDovePrefab: {fileID: 8528837720085214103, guid: e83451c99a68e584db71e25bcd9a3355,
+    type: 3}
+  m_popHawkPrefab: {fileID: 782348845742069416, guid: 8ccf720a5c866544485265ccb9defc52,
     type: 3}
   m_foodPrefab: {fileID: 6709032981560332935, guid: d049523e6c4340649988ed17d9c54afb,
     type: 3}
-  HawkMaterial: {fileID: 2100000, guid: d700e21414b63854c8ee7e582c2741e0, type: 2}
   FoodObjectPool: []
   FoodPool: []
   PopPool: []
+  PopPosPool: []
   m_floorSize: 5
-  TotalFoodBiomass: 200
+  TotalFoodBiomass: 2000
   StartingPops: 4
   FoodPerBamboo: 2
   StartingFoodPop: 10
   MinPopSpeed: 4
   MaxPopSpeed: 8
-  MinimumPopEnergy: 5
+  MinimumPopEnergy: 4
+  MutationChance: 10
   timeScale: 1
-  SpeedFactor: 10
+  SpeedFactor: 5
 --- !u!4 &609893968
 Transform:
   m_ObjectHideFlags: 0

@@ -14,5 +14,18 @@ public class Dove : Pop
             ResetTarget();
             EventManager.Instance.OnFoodEaten.Invoke(MyDestination);
         }
+
+        if (m_Energy.CountdownHasEnded)
+        {
+            m_Energy.EnergyTick();
+            m_Energy.ResetCountdown();
+            CheckStatus();
+        }
+    }
+
+    public override void SetDestination()
+    {
+        MyDestination = m_gameManager.ClosestFoodDestination(MyPos);
+        m_agent.SetDestination(MyDestinationVector3);
     }
 }

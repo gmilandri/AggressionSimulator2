@@ -5,30 +5,27 @@ using UnityEngine.AI;
 
 public class Pop : MonoBehaviour
 {
-    private NavMeshAgent m_agent;
+    public NavMeshAgent m_agent;
     public Vector2 MyPos;
     public Vector2 MyDestination;
 
     public EnergyPop m_Energy;
 
-    GameManager m_gameManager;
+    public GameManager m_gameManager;
 
-    private void Awake()
+    void Awake()
     {
         m_gameManager = GameManager.Instance;
         m_Energy = new EnergyPop(m_gameManager.StartingFoodPop, Random.Range(5, 15));
         m_agent = GetComponent<NavMeshAgent>();
         m_agent.speed = Random.Range(m_gameManager.MinPopSpeed, m_gameManager.MaxPopSpeed);
-        //GetComponent<Renderer>().material = m_gameManager.DoveMaterial;
     }
 
     void Start()
     {      
         m_agent.enabled = true;
-        MyDestination = Vector2.zero;
-        MyPos = new Vector2(transform.position.x, transform.position.z);
 
-        SetDestination();
+        ResetTarget();
     }
 
     public virtual void MyUpdate()
@@ -36,22 +33,11 @@ public class Pop : MonoBehaviour
         MyPos = new Vector2(transform.position.x, transform.position.z);
 
         m_Energy.TimeTick();
-        if (m_Energy.CountdownHasEnded)
-        {           
-            m_Energy.EnergyTick();
-            m_Energy.ResetCountdown();
-            CheckStatus();
-        }
-
     }
 
-    public void SetDestination()
-    {
-        MyDestination = m_gameManager.ClosestDestination(MyPos);
-        m_agent.SetDestination(MyDestinationVector3);
-    }
+    public virtual void SetDestination(){}
 
-    private Vector3 MyDestinationVector3 => new Vector3(MyDestination.x, 0f, MyDestination.y);
+    public Vector3 MyDestinationVector3 => new Vector3(MyDestination.x, 0f, MyDestination.y);
 
     protected float m_distanceFromFood => Vector2.Distance(MyPos, MyDestination);
 
@@ -62,18 +48,18 @@ public class Pop : MonoBehaviour
         SetDestination();
     }
 
-    private void CheckStatus()
+    protected void CheckStatus()
     {
         if (m_Energy.EnergyEnded)
             ResetSelf();
-        if (m_Energy.EnergyHigherThan(m_gameManager.StartingFoodPop * 2))
+        if (m_Energy.EnergyHigherThan(m_gameManager.StartingFoodPop * 2) && this is Dove) //TESTING
         {
             m_Energy.DecreaseEnergyBy(m_gameManager.StartingFoodPop);
             m_gameManager.CreateNewPop(this);
         }
     }
 
-    private void ResetSelf()
+    public void ResetSelf()
     {
         m_gameManager.AvailableBiomassIncreaseBy(m_Energy.Energy);
         m_Energy.ResetValues(m_gameManager.StartingFoodPop, Random.Range(5, 15));
