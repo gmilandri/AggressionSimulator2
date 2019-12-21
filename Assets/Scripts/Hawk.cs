@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Hawk : IBehaviour
+public class Hawk : Pop
 {
     public void Move()
     {

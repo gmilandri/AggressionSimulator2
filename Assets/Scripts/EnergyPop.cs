@@ -15,12 +15,12 @@ public class EnergyPop
         if (Energy > 0)
         {
             Energy--;
-            GameManager.Instance.AvailableBiomass++;
+            GameManager.Instance.AvailableBiomassIncreaseBy(1);
         }
     }
     public void ResetCountdown() => CountdownEnergyCheck = EnergyTickSpeed;
     public bool CountdownHasEnded => CountdownEnergyCheck == 0 ? true : false;
-    public bool EnergyEnded => Energy <= 0 ? true : false;
+    public bool EnergyEnded => Energy <= GameManager.Instance.MinimumPopEnergy ? true : false;
     public bool EnergyHigherThan(int amount) => Energy >= amount ? true : false;
     public void DecreaseEnergyBy(int amount) => Energy -= amount;
 

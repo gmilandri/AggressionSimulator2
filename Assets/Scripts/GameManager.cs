@@ -6,42 +6,44 @@ using UnityEngine.AI;
 
 public class GameManager : Singleton<GameManager>
 {
-    [SerializeField]
-    private int m_floorSize;
-
+    [Header("Prefabs and Arrays")]
     [SerializeField]
     private GameObject m_popPrefab;
     [SerializeField]
     private GameObject m_foodPrefab;
-    private float m_squareSize;
-
-    public float GetMaxBoundaries() => m_squareSize;
-
+    //public Material DoveMaterial;
+    public Material HawkMaterial;
     public GameObject[] FoodObjectPool;
     public Vector2[] FoodPool;
-
     public Pop[] PopPool;
 
-    private const int m_MaxPops = 1000;
-    public int SpeedFactor = 2;
 
-    public Material DoveMaterial;
-    public Material HawkMaterial;
-
-    [Range(0f, 10f)]
-    public float timeScale = 1f;
-
-    private int m_startIndex = 0;
-
+    [Header("Simulation Variables")]
+    [SerializeField]
+    private int m_floorSize;
     public int TotalFoodBiomass = 200;
-    [HideInInspector]
-    public int AvailableBiomass = 0;
-
     public int StartingPops = 0;
     public int FoodPerBamboo = 2;
     public int StartingFoodPop = 4;
     public int MinPopSpeed = 4;
     public int MaxPopSpeed = 8;
+    public int MinimumPopEnergy = 5;
+
+
+    [Header("Performance")]
+    [Range(0f, 10f)]
+    public float timeScale = 1f;
+    [Range(1, 10)]
+    public int SpeedFactor = 2;
+
+    private float m_squareSize;
+    private int m_startIndex = 0;
+    private int m_availableBiomass = 0;
+
+
+    public float GetMaxBoundaries() => m_squareSize;
+
+    public void AvailableBiomassIncreaseBy(int amount) => m_availableBiomass += amount;
 
     void Start()
     {
@@ -50,13 +52,16 @@ public class GameManager : Singleton<GameManager>
         floor.transform.position = new Vector3(m_floorSize * 5, 0, m_floorSize * 5);
         m_squareSize = floor.transform.localScale.x * 10 - 2;
 
+        Camera.main.transform.position = new Vector3(floor.transform.position.x, 20, -12);
+
         FoodPool = new Vector2[TotalFoodBiomass / FoodPerBamboo];
         FoodObjectPool = new GameObject[TotalFoodBiomass / FoodPerBamboo];
-        PopPool = new Pop[m_MaxPops];
+
+        PopPool = new Pop[TotalFoodBiomass / MinimumPopEnergy];
 
         EventManager.Instance.OnFoodEaten.AddListener(m_gameManager_FoodEaten);
 
-        AvailableBiomass = TotalFoodBiomass;
+        m_availableBiomass = TotalFoodBiomass;
 
         InizializeNavMesh();
         PlacePops();
@@ -67,7 +72,7 @@ public class GameManager : Singleton<GameManager>
     {
         Time.timeScale = timeScale;
 
-        if (AvailableBiomass >= FoodPerBamboo)
+        if (m_availableBiomass >= FoodPerBamboo)
             RespawnFood();
 
         for (int i = m_startIndex; i < PopPool.Length; i += SpeedFactor)
@@ -91,10 +96,10 @@ public class GameManager : Singleton<GameManager>
         for (int i = 0; i < FoodPool.Length; i++)
         {
             FoodObjectPool[i] = Instantiate(m_foodPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent);
-            if (AvailableBiomass >= FoodPerBamboo)
+            if (m_availableBiomass >= FoodPerBamboo)
             {
                 FoodPool[i] = new Vector2(FoodObjectPool[i].transform.position.x, FoodObjectPool[i].transform.position.z);
-                AvailableBiomass -= FoodPerBamboo;
+                m_availableBiomass -= FoodPerBamboo;
             }
             else
             {
@@ -109,7 +114,7 @@ public class GameManager : Singleton<GameManager>
         Transform parent = GameObject.Find("PopParent").transform;
         for (int i = 0; i < StartingPops; i++)
         {
-            AvailableBiomass -= StartingFoodPop;
+            m_availableBiomass -= StartingFoodPop;
             PopPool[i] = Instantiate(m_popPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
             PopPool[i].gameObject.name = "Pop n." + i.ToString();
         }
@@ -155,7 +160,7 @@ public class GameManager : Singleton<GameManager>
 
     private void RespawnFood()
     {
-        AvailableBiomass -= FoodPerBamboo;
+        m_availableBiomass -= FoodPerBamboo;
         for (int i = 0; i < FoodPool.Length; i++)
         {
             if (FoodPool[i] == Vector2.zero)
