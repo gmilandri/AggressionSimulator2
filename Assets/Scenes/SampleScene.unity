@@ -240,14 +240,16 @@ MonoBehaviour:
   EggObjectPool: []
   EggPool: []
   m_floorSize: 20
-  TotalFoodBiomass: 5000
+  TotalFoodBiomass: 10000
   StartingPops: 1
-  FoodPerBamboo: 4
-  StartingFoodPop: 10
-  StartingPopSpeed: 6
-  MinimumPopEnergy: 5
-  MutationChance: 1
+  FoodPerBamboo: 10
+  StartingFoodPop: 50
+  StartingPopSpeed: 5
+  MinimumPopEnergy: 20
+  MutationChance: 30
   DoveGenerosity: 1
+  DoveCount: 0
+  HawkCount: 0
   SpeedFactor: 1
 --- !u!4 &609893968
 Transform:

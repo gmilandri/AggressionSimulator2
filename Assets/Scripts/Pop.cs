@@ -13,6 +13,19 @@ public class Pop : MonoBehaviour
 
     public GameManager m_gameManager;
 
+    public int MetabolismRate = 50;
+
+    public float Size = 1;
+
+    public float EnergySpentPerTick 
+    {
+        get
+        {
+            return m_agent.speed / m_gameManager.StartingPopSpeed + Size - 1;
+        }
+    }
+
+
     void Awake()
     {
         m_gameManager = GameManager.Instance;
@@ -54,9 +67,16 @@ public class Pop : MonoBehaviour
     public void ResetSelf()
     {
         m_gameManager.AvailableBiomassIncreaseBy(m_Energy.Energy);
-        m_Energy.ResetValues(m_gameManager.StartingFoodPop, Random.Range(5, 15));
+        m_Energy.ResetValues(m_gameManager.StartingFoodPop, Random.Range(11, 15));
         MyDestination = Vector2.zero;
-        m_agent.speed = m_gameManager.StartingPopSpeed;
+
+        transform.localScale = new Vector3(1, 1, 1);
+        Size = 1;
+
+        if (this is Dove)
+            m_gameManager.DoveCount--;
+        else
+            m_gameManager.HawkCount--;
         gameObject.SetActive(false);
     }
 }

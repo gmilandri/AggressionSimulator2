@@ -15,14 +15,19 @@ public class Dove : Pop
 
         if (DistanceFromFood() < 1f)
         {
-            m_Energy.IncreaseEnergy(GameManager.Instance.FoodPerBamboo);
+
+            float totalEnergyFromEatenFood = GameManager.Instance.FoodPerBamboo;
+            float totalEnergyToDove = totalEnergyFromEatenFood / 100 * MetabolismRate;
+            m_Energy.IncreaseEnergyBy(totalEnergyToDove);
+            m_gameManager.AvailableBiomassIncreaseBy(totalEnergyFromEatenFood - totalEnergyToDove);
+
             ResetTarget();
             EventManager.Instance.OnFoodEaten.Invoke(MyDestination);
         }
 
         if (m_Energy.CountdownHasEnded)
         {
-            m_Energy.EnergyTick();
+            m_Energy.EnergyTick(EnergySpentPerTick);
             m_Energy.ResetCountdown();
             CheckStatus();
         }
@@ -55,7 +60,7 @@ public class Dove : Pop
             Vector3 dir = new Vector3(transform.position.x + x, transform.position.y + y, 0);
             RaycastHit hit;
 
-            if (Physics.Raycast (transform.position, dir, out hit)) 
+            if (Physics.Raycast (transform.position, dir, out hit, maxDistance: 3f)) 
             {
                 if (hit.collider.gameObject.CompareTag("Dove"))
                 {
@@ -63,7 +68,7 @@ public class Dove : Pop
                     if (dove.m_Energy.Energy < m_Energy.Energy)
                     {
                         m_Energy.DecreaseEnergyBy(1);
-                        dove.m_Energy.IncreaseEnergy(1);
+                        dove.m_Energy.IncreaseEnergyBy(1);
                     }
                 }
             }

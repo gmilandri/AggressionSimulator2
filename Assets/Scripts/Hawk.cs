@@ -14,13 +14,17 @@ public class Hawk : Pop
         SelectPrey();
 
         if (!HasPossibleTarget)
-            ResetSelf();
+            m_agent.ResetPath();
         else
             m_agent.SetDestination(m_gameManager.PopObjectPool[m_indexTarget].transform.position);
 
-        if (DistanceFromFood() < 1.5f)
+        if (HasPossibleTarget && DistanceFromFood() < 1.5f)
         {
-            m_Energy.IncreaseEnergy(GameManager.Instance.PopPool[m_indexTarget].m_Energy.Energy - GameManager.Instance.MinimumPopEnergy);
+            float totalEnergyFromEatenPop = GameManager.Instance.PopPool[m_indexTarget].m_Energy.Energy - GameManager.Instance.MinimumPopEnergy;
+            float totalEnergyToHawk = totalEnergyFromEatenPop / 100 * MetabolismRate;
+            m_Energy.IncreaseEnergyBy(totalEnergyToHawk);
+            m_gameManager.AvailableBiomassIncreaseBy(totalEnergyFromEatenPop - totalEnergyToHawk);
+                    
             GameManager.Instance.PopPool[m_indexTarget].m_Energy.ResetEnergy();
 
             EventManager.Instance.OnPopEaten.Invoke(m_indexTarget);
@@ -28,7 +32,7 @@ public class Hawk : Pop
 
         if (m_Energy.CountdownHasEnded)
         {
-            m_Energy.EnergyTick();
+            m_Energy.EnergyTick(EnergySpentPerTick);
             m_Energy.ResetCountdown();
             CheckStatus();
         }
@@ -48,7 +52,7 @@ public class Hawk : Pop
 
     private bool HasPossibleTarget => m_indexTarget == -1 ? false : true;
 
-    private void SelectPrey() => m_indexTarget = m_gameManager.ClosestPopDestination(transform.position);
+    private void SelectPrey() => m_indexTarget = m_gameManager.ClosestPopDestination(transform.position, Size);
 
 
 }

@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 5355042268089483440}
   m_Layer: 0
   m_Name: HawkPrefab
-  m_TagString: Untagged
+  m_TagString: Hawk
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -111,6 +111,7 @@ MonoBehaviour:
   MyPos: {x: 0, y: 0}
   MyDestination: {x: 0, y: 0}
   m_gameManager: {fileID: 0}
+  MetabolismRate: 50
 --- !u!195 &5355042268089483440
 NavMeshAgent:
   m_ObjectHideFlags: 0
