@@ -16,9 +16,9 @@ public class Pop : MonoBehaviour
     void Awake()
     {
         m_gameManager = GameManager.Instance;
-        m_Energy = new EnergyPop(m_gameManager.StartingFoodPop, Random.Range(5, 15));
+        m_Energy = new EnergyPop(m_gameManager.StartingFoodPop, Random.Range(11, 15));
         m_agent = GetComponent<NavMeshAgent>();
-        m_agent.speed = Random.Range(m_gameManager.MinPopSpeed, m_gameManager.MaxPopSpeed);
+        m_agent.speed = m_gameManager.StartingPopSpeed;
         m_agent.enabled = true;
     }
 
@@ -29,8 +29,6 @@ public class Pop : MonoBehaviour
 
     public virtual void MyUpdate()
     {
-        MyPos = new Vector2(transform.position.x, transform.position.z);
-
         m_Energy.TimeTick();
     }
 
@@ -40,12 +38,7 @@ public class Pop : MonoBehaviour
 
     public virtual float DistanceFromFood() => Vector2.Distance(MyPos, MyDestination);
 
-    public virtual void ResetTarget()
-    {
-        MyDestination = Vector2.zero;
-        MyPos = new Vector2(transform.position.x, transform.position.z);
-        SetDestination();
-    }
+    public virtual void ResetTarget() {}
 
     protected void CheckStatus()
     {
@@ -54,7 +47,7 @@ public class Pop : MonoBehaviour
         if (m_Energy.EnergyHigherThan(m_gameManager.StartingFoodPop * 2)) //TESTING
         {
             m_Energy.DecreaseEnergyBy(m_gameManager.StartingFoodPop);
-            m_gameManager.CreateNewPop(this);
+            m_gameManager.SpawnEgg(this);
         }
     }
 
@@ -63,7 +56,7 @@ public class Pop : MonoBehaviour
         m_gameManager.AvailableBiomassIncreaseBy(m_Energy.Energy);
         m_Energy.ResetValues(m_gameManager.StartingFoodPop, Random.Range(5, 15));
         MyDestination = Vector2.zero;
-        m_agent.speed = Random.Range(m_gameManager.MinPopSpeed, m_gameManager.MaxPopSpeed);
+        m_agent.speed = m_gameManager.StartingPopSpeed;
         gameObject.SetActive(false);
     }
 }

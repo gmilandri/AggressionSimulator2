@@ -8,9 +8,12 @@ public class Dove : Pop
     {
         base.MyUpdate();
 
-        GiveFood();
+        MyPos = new Vector2(transform.position.x, transform.position.z);
 
-        if (DistanceFromFood() < 0.5f)
+        if (m_gameManager.DoveGenerosity)
+            GiveFood();
+
+        if (DistanceFromFood() < 1f)
         {
             m_Energy.IncreaseEnergy(GameManager.Instance.FoodPerBamboo);
             ResetTarget();
@@ -31,9 +34,16 @@ public class Dove : Pop
         m_agent.SetDestination(MyDestinationVector3);
     }
 
+    public override void ResetTarget()
+    {
+        MyDestination = Vector2.zero;
+        MyPos = new Vector2(transform.position.x, transform.position.z);
+        SetDestination();
+    }
+
     public void GiveFood()
     {
-        int RaysToShoot = 30;
+        int RaysToShoot = 6;
 
         float angle = 0;
         for (int i=0; i<RaysToShoot; i++) 
@@ -44,11 +54,10 @@ public class Dove : Pop
  
             Vector3 dir = new Vector3(transform.position.x + x, transform.position.y + y, 0);
             RaycastHit hit;
-            //Debug.DrawLine(transform.position, dir, Color.red);
+
             if (Physics.Raycast (transform.position, dir, out hit)) 
             {
-             //here is how to do your cool stuff ;)
-                if (hit.collider.gameObject.tag == "Dove")
+                if (hit.collider.gameObject.CompareTag("Dove"))
                 {
                     Dove dove = hit.collider.gameObject.GetComponent<Dove>();
                     if (dove.m_Energy.Energy < m_Energy.Energy)

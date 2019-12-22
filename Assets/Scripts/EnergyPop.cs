@@ -18,7 +18,7 @@ public class EnergyPop
             GameManager.Instance.AvailableBiomassIncreaseBy(1);
         }
     }
-    public void ResetCountdown() => CountdownEnergyCheck = EnergyTickSpeed;
+    public void ResetCountdown() => CountdownEnergyCheck = EnergyTickSpeed * (11 - GameManager.Instance.SpeedFactor);
     public bool CountdownHasEnded => CountdownEnergyCheck == 0 ? true : false;
     public bool EnergyEnded => Energy <= GameManager.Instance.MinimumPopEnergy ? true : false;
     public bool EnergyHigherThan(int amount) => Energy >= amount ? true : false;
@@ -29,13 +29,13 @@ public class EnergyPop
     {
         this.Energy = Energy;
         this.EnergyTickSpeed = EnergyTickSpeed;
-        this.CountdownEnergyCheck = EnergyTickSpeed;
+        this.CountdownEnergyCheck = EnergyTickSpeed * (11 - GameManager.Instance.SpeedFactor);
     }
 
     public EnergyPop (int Energy, int EnergyTickSpeed)
     {
         this.Energy = Energy;
         this.EnergyTickSpeed = EnergyTickSpeed;
-        this.CountdownEnergyCheck = EnergyTickSpeed;
+        this.CountdownEnergyCheck = EnergyTickSpeed * (11 - GameManager.Instance.SpeedFactor); ;
     }
 }

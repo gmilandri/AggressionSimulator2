@@ -229,23 +229,26 @@ MonoBehaviour:
     type: 3}
   m_popHawkPrefab: {fileID: 782348845742069416, guid: 8ccf720a5c866544485265ccb9defc52,
     type: 3}
-  m_foodPrefab: {fileID: 6709032981560332935, guid: d049523e6c4340649988ed17d9c54afb,
+  m_foodPrefab: {fileID: 1919371502099865306, guid: d049523e6c4340649988ed17d9c54afb,
+    type: 3}
+  m_eggPrefab: {fileID: 8910137599737047851, guid: 8899d0e1b4620a74da0b9651d841862a,
     type: 3}
   FoodObjectPool: []
   FoodPool: []
   PopObjectPool: []
   PopPool: []
-  m_floorSize: 10
+  EggObjectPool: []
+  EggPool: []
+  m_floorSize: 20
   TotalFoodBiomass: 5000
-  StartingPops: 10
-  FoodPerBamboo: 5
-  StartingFoodPop: 16
-  MinPopSpeed: 8
-  MaxPopSpeed: 16
-  MinimumPopEnergy: 8
-  MutationChance: 5
-  timeScale: 1
-  SpeedFactor: 10
+  StartingPops: 1
+  FoodPerBamboo: 4
+  StartingFoodPop: 10
+  StartingPopSpeed: 6
+  MinimumPopEnergy: 5
+  MutationChance: 1
+  DoveGenerosity: 1
+  SpeedFactor: 1
 --- !u!4 &609893968
 Transform:
   m_ObjectHideFlags: 0
@@ -444,6 +447,36 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &892210913
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 892210914}
+  m_Layer: 0
+  m_Name: EggParent
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &892210914
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 892210913}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 7
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &963194225
 GameObject:
   m_ObjectHideFlags: 0

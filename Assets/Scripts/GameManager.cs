@@ -13,11 +13,15 @@ public class GameManager : Singleton<GameManager>
     private GameObject m_popHawkPrefab;
     [SerializeField]
     private GameObject m_foodPrefab;
+    [SerializeField]
+    private GameObject m_eggPrefab;
 
     public GameObject[] FoodObjectPool;
     public Vector2[] FoodPool;
     public GameObject[] PopObjectPool;
     public Pop[] PopPool;
+    public GameObject[] EggObjectPool;
+    public EggSpawnerInformation[] EggPool;
 
     [Header("Simulation Variables")]
     [SerializeField]
@@ -26,18 +30,15 @@ public class GameManager : Singleton<GameManager>
     public int StartingPops = 0;
     public int FoodPerBamboo = 2;
     public int StartingFoodPop = 4;
-    public int MinPopSpeed = 4;
-    public int MaxPopSpeed = 8;
+    public int StartingPopSpeed = 4;
     public int MinimumPopEnergy = 5;
+    [Range(1, 100)]
     public int MutationChance = 5;
+    public bool DoveGenerosity = true;
 
 
-    [Header("Performance")]
-    [Range(0f, 10f)]
-    public float timeScale = 1f;
-    [Range(1, 10)]
-    public int SpeedFactor = 2;
-
+    [HideInInspector]
+    public int SpeedFactor = 1;
     private float m_squareSize;
     private int m_startIndex = 0;
     private int m_availableBiomass = 0;
@@ -62,6 +63,9 @@ public class GameManager : Singleton<GameManager>
         PopPool = new Pop[TotalFoodBiomass / MinimumPopEnergy];
         PopObjectPool = new GameObject[TotalFoodBiomass / MinimumPopEnergy];
 
+        EggPool = new EggSpawnerInformation[TotalFoodBiomass / MinimumPopEnergy];
+        EggObjectPool = new GameObject[TotalFoodBiomass / MinimumPopEnergy];
+
         EventManager.Instance.OnFoodEaten.AddListener(m_gameManager_FoodEaten);
         EventManager.Instance.OnPopEaten.AddListener(m_gameManager_PopEaten);
 
@@ -74,7 +78,19 @@ public class GameManager : Singleton<GameManager>
 
     void Update()
     {
-        Time.timeScale = timeScale;
+        if (m_startIndex == 0)
+        {
+            int activePops = 0;
+            foreach (var pop in PopObjectPool)
+                if (pop != null && pop.activeSelf)
+                    activePops++;
+
+            int HundredsofPops = activePops / 100;
+            if (HundredsofPops == 0)
+                SpeedFactor = 1;
+            else
+                SpeedFactor = HundredsofPops;
+        }
 
         if (m_availableBiomass >= FoodPerBamboo)
             RespawnFood();
@@ -175,6 +191,36 @@ public class GameManager : Singleton<GameManager>
         return destination;
     }
 
+    public void SpawnEgg(Pop original)
+    {
+
+        Transform parent = GameObject.Find("EggParent").transform;
+
+        foreach (var egg in EggObjectPool)
+        {
+            if (egg != null && !egg.activeSelf)
+            {
+                egg.SetActive(true);
+                egg.GetComponent<EggSpawnerInformation>().SetPopType(original);
+                egg.transform.position = new Vector3(original.gameObject.transform.position.x, egg.transform.localScale.y / 2, original.gameObject.transform.position.z);
+                StartCoroutine(egg.GetComponent<EggSpawnerInformation>().BirthCountdown());
+                return;
+            }
+        }
+        for (int i = 0; i < EggObjectPool.Length; i++)
+        {
+            if (EggObjectPool[i] == null)
+            {
+                EggPool[i] = Instantiate(m_eggPrefab, new Vector3(original.gameObject.transform.position.x, m_eggPrefab.transform.localScale.y / 2, original.gameObject.transform.position.z), Quaternion.identity, parent).GetComponent<EggSpawnerInformation>();
+                EggPool[i].gameObject.name = "Egg n." + i.ToString();
+                EggObjectPool[i] = EggPool[i].gameObject;
+                EggPool[i].SetPopType(original);
+                StartCoroutine(EggPool[i].GetComponent<EggSpawnerInformation>().BirthCountdown());
+                return;
+            }
+        }
+    }
+
     private void DespawnFood(Vector2 eatenFood)
     {
         for (int i = 0; i < FoodPool.Length; i++)
@@ -230,87 +276,104 @@ public class GameManager : Singleton<GameManager>
         DespawnPop(foodPos);
     }
 
-    public void CreateNewPop(Pop original)
+    
+
+    public void CreateNewPop(EggSpawnerInformation original)
+    {
+        MutationType mutation = MutationType.None;
+
+        if (RandomMutationChance)
+            mutation = MutationType.SwitchBehaviour;//(MutationType)Random.Range(1,3);
+
+        switch (mutation)
+        {
+            case MutationType.None:
+                SpawnSamePop(original);
+                break;
+            case MutationType.SwitchBehaviour:
+                SpawnDifferentPop(original);
+                break;
+            case MutationType.SpeedIncrease:
+                break;
+            case MutationType.SpeedDecrease:
+                break;
+        }
+    }
+
+    private void SpawnSamePop(EggSpawnerInformation original)
     {
         Transform parent = GameObject.Find("PopParent").transform;
-        var createdPop = false;
-        if (!RandomMutationChance)
+
+        foreach (var pop in PopPool)
         {
-            foreach (var pop in PopPool)
+            if (pop != null && !pop.gameObject.activeSelf && SamePopType(original, pop))
             {
-                if (pop != null && !pop.gameObject.activeSelf && SamePopType(original, pop))
-                {
-                    pop.gameObject.SetActive(true);
-                    if (pop is Dove)
-                        pop.transform.position = original.transform.position;
-                    else
-                        pop.transform.position = new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries()));
-                    pop.ResetTarget();
-                    createdPop = true;
-                    break;
-                }
-            }
-            if (!createdPop)
-            {
-                for (int i = 0; i < PopPool.Length; i++)
-                {
-                    if (PopPool[i] == null)
-                    {
-                        if (original is Dove)
-                            PopPool[i] = Instantiate(m_popDovePrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
-                        else
-                            PopPool[i] = Instantiate(m_popHawkPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
-                        PopPool[i].gameObject.name = "Pop n." + i.ToString();
-                        PopObjectPool[i] = PopPool[i].gameObject;
-                        break;
-                    }
-                }
+                pop.gameObject.SetActive(true);
+                pop.transform.position = original.gameObject.transform.position;
+                pop.ResetTarget();
+                return;
             }
         }
-        else
+        for (int i = 0; i < PopPool.Length; i++)
         {
-            foreach (var pop in PopPool)
+            if (PopPool[i] == null)
             {
-                if (pop != null && !pop.gameObject.activeSelf && !SamePopType(original, pop))
-                {
-                    pop.gameObject.SetActive(true);
-                    if (pop is Dove)
-                        pop.transform.position = original.transform.position;
-                    else
-                        pop.transform.position = new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries()));
-                    pop.ResetTarget();
-                    createdPop = true;
-                    break;
-                }
-            }
-            if (!createdPop)
-            {
-                for (int i = 0; i < PopPool.Length; i++)
-                {
-                    if (PopPool[i] == null)
-                    {
-                        if (original is Dove)
-                            PopPool[i] = Instantiate(m_popHawkPrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
-                        else
-                            PopPool[i] = Instantiate(m_popDovePrefab, original.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
-                        PopPool[i].gameObject.name = "Pop n." + i.ToString();
-                        PopObjectPool[i] = PopPool[i].gameObject;
-                        break;
-                    }
-                }
+                PopPool[i] = Instantiate(GetRightPrefab(original), original.gameObject.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                PopPool[i].gameObject.name = "Pop n." + i.ToString();
+                PopObjectPool[i] = PopPool[i].gameObject;
+                break;
             }
         }
     }
 
-    private bool SamePopType (Pop one, Pop two)
+    private void SpawnDifferentPop(EggSpawnerInformation original)
     {
-        if (one is Dove && two is Dove)
+        Transform parent = GameObject.Find("PopParent").transform;
+
+        foreach (var pop in PopPool)
+        {
+            if (pop != null && !pop.gameObject.activeSelf && !SamePopType(original, pop))
+            {
+                pop.gameObject.SetActive(true);
+                pop.transform.position = original.gameObject.transform.position;
+                pop.ResetTarget();
+                return;
+            }
+        }
+        for (int i = 0; i < PopPool.Length; i++)
+        {
+            if (PopPool[i] == null)
+            {
+
+                PopPool[i] = Instantiate(GetOtherPrefab(original), original.gameObject.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                PopPool[i].gameObject.name = "Pop n." + i.ToString();
+                PopObjectPool[i] = PopPool[i].gameObject;
+                break;
+            }
+        }
+    }
+
+    private bool SamePopType (EggSpawnerInformation one, Pop two)
+    {
+        if (one.IsDove && two is Dove)
             return true;
-        if (one is Hawk && two is Hawk)
+        if (!one.IsDove && two is Hawk)
             return true;
         return false;
     }
 
     private bool RandomMutationChance => Random.Range(0, 100) < MutationChance ? true : false;
+
+    private GameObject GetRightPrefab(EggSpawnerInformation original) => original.IsDove ? m_popDovePrefab : m_popHawkPrefab;
+
+    private GameObject GetOtherPrefab(EggSpawnerInformation original) => original.IsDove ? m_popHawkPrefab : m_popDovePrefab;
+
+    enum MutationType
+    {
+        None,
+        SwitchBehaviour,
+        SpeedIncrease,
+        SpeedDecrease
+    }
 
 }
