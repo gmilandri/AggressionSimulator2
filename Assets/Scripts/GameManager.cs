@@ -16,10 +16,10 @@ public class GameManager : Singleton<GameManager>
     private GameObject m_eggPrefab;
 
     public GameObject[] FoodObjectPool;
-    public GameObject[] PopObjectPool;
-    public Pop[] PopPool;
-    public GameObject[] EggObjectPool;
-    public EggSpawnerInformation[] EggPool;
+    public List<GameObject> PopObjectPool;
+    public List<Pop> PopPool;
+    public List<GameObject> EggObjectPool;
+    public List<EggSpawnerInformation> EggPool;
 
     [Header("Simulation Variables")]
     [SerializeField]
@@ -34,8 +34,15 @@ public class GameManager : Singleton<GameManager>
     public int MutationChance = 5;
     public bool DoveGenerosity = true;
     private float SpeedMutationChange;
+    [Header("Debugging")]
     public int DoveCount;
     public int HawkCount;
+    public bool Debugging;
+    public float RealTotalBiomass;
+    public float RealDoveBiomass;
+    public float RealHawkBiomass;
+    public float RealEggBiomass;
+    public float RealFoodBiomass;
 
     [HideInInspector]
     public int SpeedFactor = 1;
@@ -46,7 +53,7 @@ public class GameManager : Singleton<GameManager>
 
     public float GetMaxBoundaries() => m_squareSize;
 
-    public void AvailableBiomassIncreaseBy(float amount) => m_availableBiomass += amount;
+    //public void AvailableBiomassIncreaseBy(float amount) => m_availableBiomass += amount;
 
     void Start()
     {
@@ -60,13 +67,11 @@ public class GameManager : Singleton<GameManager>
 
         FoodObjectPool = new GameObject[TotalFoodBiomass / FoodPerBamboo];
 
-        PopPool = new Pop[m_floorSize * 50];//TotalFoodBiomass / (MinimumPopEnergy * 2)];
-        PopObjectPool = new GameObject[m_floorSize * 50];
+        PopPool = new List<Pop>();
+        PopObjectPool = new List<GameObject>();
 
-        EggPool = new EggSpawnerInformation[m_floorSize * 50];
-        EggObjectPool = new GameObject[m_floorSize * 50];
-
-        EventManager.Instance.OnPopEaten.AddListener(m_gameManager_PopEaten);
+        EggPool = new List<EggSpawnerInformation>();
+        EggObjectPool = new List<GameObject>();
 
         m_availableBiomass = TotalFoodBiomass;
 
@@ -86,7 +91,7 @@ public class GameManager : Singleton<GameManager>
                 if (pop != null && pop.activeSelf)
                     activePops++;
 
-            int HundredsofPops = activePops / 40;
+            int HundredsofPops = activePops / 100;
             if (HundredsofPops == 0)
                 SpeedFactor = 1;
             else
@@ -96,15 +101,53 @@ public class GameManager : Singleton<GameManager>
         if (m_availableBiomass >= FoodPerBamboo)
             RespawnFood();
 
-        for (int i = m_startIndex; i < PopPool.Length; i += SpeedFactor)
+        for (int i = m_startIndex; i < PopPool.Count; i += SpeedFactor)
         {
             if (PopPool[i] == null)
-                continue;
+                break;
             if (!PopPool[i].gameObject.activeSelf)
                 continue;
-            PopPool[i].MyUpdate();
-            
+            PopPool[i].MyUpdate();            
         }
+
+        RealTotalBiomass = 0;
+        RealDoveBiomass = 0;
+        RealHawkBiomass = 0;
+        RealFoodBiomass = 0;
+        RealEggBiomass = 0;
+
+        foreach (var food in FoodObjectPool)
+            if (food.activeSelf)
+                RealFoodBiomass += FoodPerBamboo;
+
+        for (int i = 0; i < PopObjectPool.Count; i++)
+        {
+            if (PopObjectPool[i] == null)
+                break;
+            if (PopObjectPool[i].activeSelf)
+            {
+                if (PopPool[i] is Dove)
+                {
+                    RealDoveBiomass += PopPool[i].m_Energy.Energy;
+                }
+                else
+                {
+                    RealHawkBiomass += PopPool[i].m_Energy.Energy;
+                }
+            }
+        }
+
+        foreach (var egg in EggObjectPool)
+        {
+            if (egg == null)
+                break;
+            if (egg.activeSelf)
+                RealEggBiomass += StartingFoodPop;
+        }
+
+        RealTotalBiomass = RealDoveBiomass + RealHawkBiomass + RealEggBiomass + RealFoodBiomass;
+
+        m_availableBiomass = TotalFoodBiomass - RealTotalBiomass;
 
         m_startIndex++;
         if (m_startIndex == SpeedFactor)
@@ -135,9 +178,10 @@ public class GameManager : Singleton<GameManager>
         for (int i = 0; i < StartingPops; i++)
         {
             m_availableBiomass -= StartingFoodPop;
-            PopPool[i] = Instantiate(m_popDovePrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
-            PopPool[i].gameObject.name = "Pop n." + i.ToString();
-            PopObjectPool[i] = PopPool[i].gameObject;
+            Pop newPop = Instantiate(m_popDovePrefab, new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries())), Quaternion.identity, parent).GetComponent<Pop>();
+            PopPool.Add(newPop);
+            newPop.gameObject.name = "Pop n." + PopPool.Count.ToString();
+            PopObjectPool.Add(newPop.gameObject);
         }
         DoveCount = StartingPops;
     }
@@ -145,32 +189,6 @@ public class GameManager : Singleton<GameManager>
     void InizializeNavMesh()
     {
         GameObject.Find("NavMesh").GetComponent<NavMeshSurface>().BuildNavMesh();
-    }
-
-    public int ClosestPopDestination(Vector3 origin, float hunterSize)
-    {
-        float minDistance = float.MaxValue;
-        int destination = -1;
-
-        for (int i = 0; i < PopObjectPool.Length; i++)
-        {
-            if (PopObjectPool[i] == null)
-                continue;
-            if (!PopObjectPool[i].activeSelf)
-                continue;
-            if (PopPool[i].Size > hunterSize)
-                continue;
-            if (origin == PopObjectPool[i].transform.position)
-                continue;
-            var distance = Vector3.Distance(origin, PopObjectPool[i].transform.position);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                destination = i;
-            }
-        }
-
-        return destination;
     }
 
     public void SpawnEgg(Pop original)
@@ -193,27 +211,24 @@ public class GameManager : Singleton<GameManager>
                 return;
             }
         }
-        for (int i = 0; i < EggObjectPool.Length; i++)
-        {
-            if (EggObjectPool[i] == null)
-            {
-                EggPool[i] = Instantiate(m_eggPrefab, new Vector3(original.gameObject.transform.position.x, m_eggPrefab.transform.localScale.y / 2, original.gameObject.transform.position.z), Quaternion.identity, parent).GetComponent<EggSpawnerInformation>();
-                EggPool[i].gameObject.name = "Egg n." + i.ToString();
-                EggObjectPool[i] = EggPool[i].gameObject;
-                EggPool[i].SetPopType(original);
-                var eggInfo = EggPool[i].GetComponent<EggSpawnerInformation>();
-                eggInfo.SetOriginalSpeed(original.GetComponent<NavMeshAgent>().speed);
-                eggInfo.SetOriginalMetabolism(original.MetabolismRate);
-                eggInfo.SetOriginalSize(original.Size);
-                StartCoroutine(eggInfo.BirthCountdown());
-                return;
-            }
-        }
-    }
-
-    private void DespawnPop(int eatenFood)
-    {
-        PopPool[eatenFood].ResetSelf();
+        //for (int i = 0; i < EggObjectPool.Count; i++)
+        //{
+        //    if (EggObjectPool[i] == null)
+        //    {
+                EggSpawnerInformation newEgg;
+                newEgg = Instantiate(m_eggPrefab, new Vector3(original.gameObject.transform.position.x, m_eggPrefab.transform.localScale.y / 2, original.gameObject.transform.position.z), Quaternion.identity, parent).GetComponent<EggSpawnerInformation>();
+                EggPool.Add(newEgg);
+                EggObjectPool.Add(newEgg.gameObject);
+                newEgg.gameObject.name = "Egg n." + EggPool.Count.ToString();
+                newEgg.SetPopType(original);
+                var eggInfo2 = newEgg.GetComponent<EggSpawnerInformation>();
+                eggInfo2.SetOriginalSpeed(original.GetComponent<NavMeshAgent>().speed);
+                eggInfo2.SetOriginalMetabolism(original.MetabolismRate);
+                eggInfo2.SetOriginalSize(original.Size);
+                StartCoroutine(eggInfo2.BirthCountdown());
+        //        return;
+        //    }
+        //}
     }
 
     private void RespawnFood()
@@ -221,18 +236,15 @@ public class GameManager : Singleton<GameManager>
         m_availableBiomass -= FoodPerBamboo;
         for (int i = 0; i < FoodObjectPool.Length; i++)
         {
+            if (m_availableBiomass <= 0)
+                break;
             if (!FoodObjectPool[i].activeSelf)
             {
                 FoodObjectPool[i].SetActive(true);
                 FoodObjectPool[i].transform.position = new Vector3(Random.Range(1, GetMaxBoundaries()), 1f, Random.Range(1, GetMaxBoundaries()));
-                break;
+                m_availableBiomass -= FoodPerBamboo;
             }
         }
-    }
-
-    void m_gameManager_PopEaten(int foodPos)
-    {
-        DespawnPop(foodPos);
     }
 
     public bool IsDestinationOnFloor(Vector3 destination)
@@ -302,11 +314,15 @@ public class GameManager : Singleton<GameManager>
                 CopyInfoEggOnNewPop(original, pop);
 
                 if (shouldIncreaseSpeed)
+                {
                     pop.GetComponent<NavMeshAgent>().speed += SpeedMutationChange;
+                }
                 if (shouldDecreaseSpeed)
-                {                
+                {
                     if (original.OriginalSpeed - SpeedMutationChange > 0)
+                    {
                         pop.GetComponent<NavMeshAgent>().speed -= SpeedMutationChange;
+                    }
                 }
                 if (shouldIncreaseMetabolism && pop.MetabolismRate < 100)
                     pop.MetabolismRate++;
@@ -315,7 +331,7 @@ public class GameManager : Singleton<GameManager>
                 if (shouldIncreaseSize && original.OriginalSpeed - SpeedMutationChange > 0)
                 {
                     pop.Size += 0.1f;
-                    pop.GetComponent<NavMeshAgent>().speed = original.OriginalSpeed - SpeedMutationChange;                    
+                    pop.GetComponent<NavMeshAgent>().speed = original.OriginalSpeed - SpeedMutationChange;
                 }
                 if (shouldDecreaseSize && original.OriginalSize > 0.1f)
                 {
@@ -333,47 +349,48 @@ public class GameManager : Singleton<GameManager>
                 return;
             }
         }
-        for (int i = 0; i < PopPool.Length; i++)
-        {
-            if (PopPool[i] == null)
-            {
-                PopPool[i] = Instantiate(GetRightPrefab(original), original.gameObject.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
-                PopPool[i].gameObject.name = "Pop n." + i.ToString();
-                PopObjectPool[i] = PopPool[i].gameObject;
+        //for (int i = 0; i < PopPool.Count; i++)
+        //{
+        //    if (PopPool[i] == null)
+        //    {
+                Pop newPop = Instantiate(GetRightPrefab(original), original.gameObject.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                PopPool.Add(newPop);
+                newPop.gameObject.name = "Pop n." + PopPool.Count.ToString();
+                PopObjectPool.Add(newPop.gameObject);
 
-                CopyInfoEggOnNewPop(original, PopPool[i]);
+                CopyInfoEggOnNewPop(original, newPop);
 
                 if (shouldIncreaseSpeed)
-                    PopPool[i].GetComponent<NavMeshAgent>().speed += SpeedMutationChange;
+                    newPop.GetComponent<NavMeshAgent>().speed += SpeedMutationChange;
                 if (shouldDecreaseSpeed)
                 {
                     if (original.OriginalSpeed - SpeedMutationChange > 0)
-                        PopPool[i].GetComponent<NavMeshAgent>().speed -= SpeedMutationChange;
+                        newPop.GetComponent<NavMeshAgent>().speed -= SpeedMutationChange;
                 }
-                if (shouldIncreaseMetabolism && PopPool[i].MetabolismRate < 100)
-                    PopPool[i].MetabolismRate++;
+                if (shouldIncreaseMetabolism && newPop.MetabolismRate < 100)
+                    newPop.MetabolismRate++;
                 if (shouldDecreaseMetabolism)
-                    PopPool[i].MetabolismRate--;
+                    newPop.MetabolismRate--;
                 if (shouldIncreaseSize && original.OriginalSpeed - SpeedMutationChange > 0)
                 {
-                    PopPool[i].Size += 0.1f;
-                    PopPool[i].GetComponent<NavMeshAgent>().speed = original.OriginalSpeed - SpeedMutationChange;
+                    newPop.Size += 0.1f;
+                    newPop.GetComponent<NavMeshAgent>().speed = original.OriginalSpeed - SpeedMutationChange;
                 }
                 if (shouldDecreaseSize && original.OriginalSize > 0.1f)
                 {
-                    PopPool[i].Size -= 0.1f;
-                    PopPool[i].GetComponent<NavMeshAgent>().speed = original.OriginalSpeed + SpeedMutationChange;
+                    newPop.Size -= 0.1f;
+                    newPop.GetComponent<NavMeshAgent>().speed = original.OriginalSpeed + SpeedMutationChange;
                 }
 
-                PopObjectPool[i].transform.localScale = new Vector3(PopPool[i].Size, PopPool[i].Size, PopPool[i].Size);
+                newPop.gameObject.transform.localScale = new Vector3(newPop.Size, newPop.Size, newPop.Size);
 
-                if (PopPool[i] is Dove)
+                if (newPop is Dove)
                     DoveCount++;
                 else
                     HawkCount++;
-                break;
-            }
-        }
+        //        break;
+        //    }
+        //}
     }
 
     private void SpawnDifferentPop(EggSpawnerInformation original)
@@ -399,25 +416,26 @@ public class GameManager : Singleton<GameManager>
                 return;
             }
         }
-        for (int i = 0; i < PopPool.Length; i++)
-        {
-            if (PopPool[i] == null)
-            {
-                PopPool[i] = Instantiate(GetOtherPrefab(original), original.gameObject.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
-                PopPool[i].gameObject.name = "Pop n." + i.ToString();
-                PopObjectPool[i] = PopPool[i].gameObject;
+        //for (int i = 0; i < PopPool.Count; i++)
+        //{
+        //    if (PopPool[i] == null)
+        //    {
+                Pop newPop = Instantiate(GetOtherPrefab(original), original.gameObject.transform.position, Quaternion.identity, parent).GetComponent<Pop>();
+                PopPool.Add(newPop);
+                newPop.gameObject.name = "Pop n." + PopPool.Count.ToString();
+                PopObjectPool.Add(newPop.gameObject);
 
-                CopyInfoEggOnNewPop(original, PopPool[i]);
+                CopyInfoEggOnNewPop(original, newPop);
 
-                PopObjectPool[i].transform.localScale = new Vector3(PopPool[i].Size, PopPool[i].Size, PopPool[i].Size);
+                newPop.gameObject.transform.localScale = new Vector3(newPop.Size, newPop.Size, newPop.Size);
 
-                if (PopPool[i] is Dove)
+                if (newPop is Dove)
                     DoveCount++;
                 else
                     HawkCount++;
-                break;
-            }
-        }
+        //        break;
+        //    }
+        //}
     }
 
     private bool SamePopType (EggSpawnerInformation one, Pop two)

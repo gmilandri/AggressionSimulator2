@@ -6,22 +6,23 @@ using UnityEngine.AI;
 public class Pop : MonoBehaviour
 {
     public NavMeshAgent m_agent;
-
     public EnergyPop m_Energy;
-
     public GameManager m_gameManager;
 
     public int MetabolismRate = 50;
-
     public float Size = 1;
 
-    public float VisionDistance = 10f;
+    //To IMPLEMENT
+    public float VisionDistance = 3f;
 
     public float EnergySpentPerTick 
     {
         get
         {
-            return m_agent.speed / m_gameManager.StartingPopSpeed + Size - 1;
+            float energySpent = m_agent.speed / m_gameManager.StartingPopSpeed + (Size * Size * Size) - 1;
+            if (energySpent > 0)
+                return energySpent;
+            return 0.1f;
         }
     }
 
@@ -59,7 +60,6 @@ public class Pop : MonoBehaviour
 
     public void ResetSelf()
     {
-        m_gameManager.AvailableBiomassIncreaseBy(m_Energy.Energy);
         m_Energy.ResetValues(m_gameManager.StartingFoodPop, Random.Range(11, 15));
 
         transform.localScale = new Vector3(1, 1, 1);

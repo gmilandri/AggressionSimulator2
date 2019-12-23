@@ -4,30 +4,40 @@ using UnityEngine;
 
 public class Hawk : Pop
 {
-    int m_indexTarget = -1;
+    GameObject m_target;
 
     public override void MyUpdate()
     {
+        Vector3 forward = transform.TransformDirection(Vector3.forward) * VisionDistance;
+        Debug.DrawRay(transform.position, forward, Color.red);
+
         m_Energy.TimeTick();
 
-        ResetTarget();
-        SelectPrey();
+        Debug.Log(gameObject.name + " is determining his target.");
 
-        if (!HasPossibleTarget)
-            m_agent.ResetPath();
-        else
-            m_agent.SetDestination(m_gameManager.PopObjectPool[m_indexTarget].transform.position);
+        DetermineTarget();
 
-        if (HasPossibleTarget && DistanceFromFood() < 1.5f)
+        if (HasSafeTarget())
         {
-            float totalEnergyFromEatenPop = GameManager.Instance.PopPool[m_indexTarget].m_Energy.Energy - GameManager.Instance.MinimumPopEnergy;
+            Debug.Log(gameObject.name + " has found a new target and set his destination to such target.");
+            m_agent.SetDestination(m_target.transform.position);
+        }
+
+        if (HasSafeTarget() && DistanceFromFood() < 2f)
+        {
+            Debug.Log(gameObject.name + " is close to target and ate it.");
+            float totalEnergyFromEatenPop = m_target.GetComponent<Pop>().m_Energy.Energy - GameManager.Instance.MinimumPopEnergy;
             float totalEnergyToHawk = totalEnergyFromEatenPop / 100 * MetabolismRate;
             m_Energy.IncreaseEnergyBy(totalEnergyToHawk);
-            m_gameManager.AvailableBiomassIncreaseBy(totalEnergyFromEatenPop - totalEnergyToHawk);
-                    
-            GameManager.Instance.PopPool[m_indexTarget].m_Energy.ResetEnergy();
 
-            EventManager.Instance.OnPopEaten.Invoke(m_indexTarget);
+            m_target.GetComponent<Pop>().m_Energy.ResetEnergy();
+
+            DespawnPopAndResetMyTarget();
+        }
+
+        if (!HasSafeTarget() && (!m_agent.hasPath || m_agent.remainingDistance < 1f))
+        {
+            TargetRandomSpot();
         }
 
         if (m_Energy.CountdownHasEnded)
@@ -38,16 +48,81 @@ public class Hawk : Pop
         }
     }
 
-    public override float DistanceFromFood()
+    private void DespawnPopAndResetMyTarget()
     {
-       return Vector3.Distance(transform.position, m_gameManager.PopObjectPool[m_indexTarget].transform.position);
+        Debug.Log("Food was despawned.");
+        m_target.GetComponent<Pop>().ResetSelf();
+        ResetTarget();
     }
 
-    public void ResetTarget() => m_indexTarget = -1;
+    public void ResetTarget()
+    {
+        Debug.Log(gameObject.name + " target has been reset.");
+        m_target = null;
+        m_agent.ResetPath();
+    }
 
-    private bool HasPossibleTarget => m_indexTarget == -1 ? false : true;
+    private void DetermineTarget()
+    {
+        m_target = ClosestTarget();
+    }
 
-    private void SelectPrey() => m_indexTarget = m_gameManager.ClosestPopDestination(transform.position, Size);
+    public override float DistanceFromFood() => Vector3.Distance(transform.position, m_target.transform.position);
+
+    private GameObject ClosestTarget()
+    {
+        //if (m_gameManager.DoveGenerosity)
+        //    GiveFood();
+
+        RaycastHit hit;
+
+        if (Physics.Raycast(transform.position, transform.forward, out hit, maxDistance: VisionDistance * 3f))
+        {
+            if (hit.collider.gameObject.CompareTag("Hawk") || hit.collider.gameObject.CompareTag("Dove"))
+            {
+                if (hit.collider.gameObject.GetComponent<Pop>().Size >= Size)
+                {
+                    return hit.collider.gameObject;
+                }
+            }
+        }
+        return null;
+    }
+
+    private bool HasSafeTarget()
+    {
+        if (m_target == null)
+            return false;
+        if (!m_target.activeSelf)
+            return false;
+        return true;
+    }
+
+    private void TargetRandomSpot()
+    {
+        Debug.Log(gameObject.name + " is targeting a random spot.");
+
+        bool foundSpot = false;
+        Vector3 tempDest = Vector3.zero;
+
+        while (!foundSpot)
+        {
+            var randomX = Random.Range(-5f, 5f);
+            var randomZ = Random.Range(-5f, 5f);
+            tempDest = new Vector3(transform.position.x + randomX, transform.position.y, transform.position.z + randomZ);
+            foundSpot = m_gameManager.IsDestinationOnFloor(tempDest);
+        }
+        m_agent.SetDestination(tempDest);
+    }
+    //{
+    //return Vector3.Distance(transform.position, m_gameManager.PopObjectPool[m_indexTarget].transform.position);
+    //}
+
+    // public void ResetTarget() => m_indexTarget = -1;
+
+    //private bool HasPossibleTarget => m_indexTarget == -1 ? false : true;
+
+    //private void SelectPrey() => m_indexTarget = m_gameManager.ClosestPopDestination(transform.position, Size);
 
 
 }

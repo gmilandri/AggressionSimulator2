@@ -210,9 +210,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 37cf230b7029ba94582c7d10853f2bdb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  OnPopEaten:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!114 &609893967
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -238,17 +235,23 @@ MonoBehaviour:
   PopPool: []
   EggObjectPool: []
   EggPool: []
-  m_floorSize: 20
+  m_floorSize: 10
   TotalFoodBiomass: 10000
   StartingPops: 1
-  FoodPerBamboo: 2
+  FoodPerBamboo: 10
   StartingFoodPop: 10
   StartingPopSpeed: 5
   MinimumPopEnergy: 5
-  MutationChance: 1
+  MutationChance: 30
   DoveGenerosity: 0
   DoveCount: 0
   HawkCount: 0
+  Debugging: 1
+  RealTotalBiomass: 0
+  RealDoveBiomass: 0
+  RealHawkBiomass: 0
+  RealEggBiomass: 0
+  RealFoodBiomass: 0
   SpeedFactor: 1
 --- !u!4 &609893968
 Transform:

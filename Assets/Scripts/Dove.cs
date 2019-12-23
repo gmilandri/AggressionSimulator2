@@ -8,6 +8,7 @@ public class Dove : Pop {
     GameObject m_target;
 
     bool dangerClose;
+    bool isRunningAway;
 
     public override void MyUpdate()
     {
@@ -17,7 +18,8 @@ public class Dove : Pop {
         m_Energy.TimeTick();
 
         Debug.Log(gameObject.name + " is determining his target.");
-        DetermineTarget();
+        if (!isRunningAway)
+            DetermineTarget();
 
         if (HasSafeTarget() && TargetHasChanged)
         {
@@ -31,13 +33,13 @@ public class Dove : Pop {
             float totalEnergyFromEatenFood = GameManager.Instance.FoodPerBamboo;
             float totalEnergyToDove = totalEnergyFromEatenFood / 100 * MetabolismRate;
             m_Energy.IncreaseEnergyBy(totalEnergyToDove);
-            m_gameManager.AvailableBiomassIncreaseBy(totalEnergyFromEatenFood - totalEnergyToDove);
 
             DespawnFoodAndResetMyTarget();
         }
 
-        if (!HasSafeTarget() && !m_agent.hasPath)
+        if (!HasSafeTarget() && (!m_agent.hasPath || m_agent.remainingDistance < 1f))
         {
+            isRunningAway = false;
             dangerClose = false;
             TargetRandomSpot();
         }
@@ -95,8 +97,20 @@ public class Dove : Pop {
         {
             if (hit.collider.gameObject.CompareTag("Hawk"))
             {
-                dangerClose = true;
-                Debug.Log(gameObject.name + " has an hawk in front of him!");
+                if (hit.collider.gameObject.GetComponent<Hawk>().Size >= Size)
+                {
+                    dangerClose = true;
+                    Debug.Log(gameObject.name + " has an hawk in front of him!");
+                }
+            }
+            if (hit.collider.gameObject.CompareTag("Dove"))
+            {
+                Dove dove = hit.collider.gameObject.GetComponent<Dove>();
+                if (dove.m_Energy.Energy < m_Energy.Energy)
+                {
+                    m_Energy.DecreaseEnergyBy(1);
+                    dove.m_Energy.IncreaseEnergyBy(1);
+                }
             }
             if (hit.collider.gameObject.CompareTag("Food"))
             {
@@ -110,6 +124,11 @@ public class Dove : Pop {
     {
         m_previousTarget = m_target;
         m_target = ClosestTarget();
+        if (dangerClose)
+        {
+            isRunningAway = true;
+            TargetSafeSpot();
+        }
     }
 
     private bool HasSafeTarget()
@@ -157,6 +176,29 @@ public class Dove : Pop {
             foundSpot = m_gameManager.IsDestinationOnFloor(tempDest);
         }
         m_agent.SetDestination(tempDest);
+    }
+
+    private void TargetSafeSpot()
+    {
+        Debug.Log(gameObject.name + " is running away from a hawk.");
+
+        m_agent.SetDestination(GetAvailablePoint());
+    }
+
+    private Vector3 GetAvailablePoint()
+    {
+        var answer = transform.position - (transform.forward * 10f);
+
+        if (answer.x < 1f)
+            answer = new Vector3(1, transform.position.y, transform.position.z);
+        if (answer.x > m_gameManager.GetMaxBoundaries())
+            answer = new Vector3(m_gameManager.GetMaxBoundaries(), transform.position.y, transform.position.z);
+        if (answer.z < 1f)
+            answer = new Vector3(transform.position.x, transform.position.y, 1);
+        if (answer.z > m_gameManager.GetMaxBoundaries())
+            answer = new Vector3(transform.position.x, transform.position.y, m_gameManager.GetMaxBoundaries());
+
+        return answer;
     }
 
 }

@@ -14,7 +14,6 @@ public class EnergyPop
         if (Energy > GameManager.Instance.MinimumPopEnergy)
         {
             Energy -= energySpentPerTick;
-            GameManager.Instance.AvailableBiomassIncreaseBy(energySpentPerTick);
         }
     }
     public void ResetCountdown() => CountdownEnergyCheck = EnergyTickSpeed * (11 - GameManager.Instance.SpeedFactor);
