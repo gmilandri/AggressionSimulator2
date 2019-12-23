@@ -8,7 +8,7 @@ public class Hawk : Pop
 
     public override void MyUpdate()
     {
-        base.MyUpdate();
+        m_Energy.TimeTick();
 
         ResetTarget();
         SelectPrey();
@@ -38,17 +38,12 @@ public class Hawk : Pop
         }
     }
 
-    public override void SetDestination()
-    {
-        m_agent.SetDestination(MyDestinationVector3);
-    }
-
     public override float DistanceFromFood()
     {
        return Vector3.Distance(transform.position, m_gameManager.PopObjectPool[m_indexTarget].transform.position);
     }
 
-    public override void ResetTarget() => m_indexTarget = -1;
+    public void ResetTarget() => m_indexTarget = -1;
 
     private bool HasPossibleTarget => m_indexTarget == -1 ? false : true;
 

@@ -6,8 +6,6 @@ using UnityEngine.AI;
 public class Pop : MonoBehaviour
 {
     public NavMeshAgent m_agent;
-    public Vector2 MyPos;
-    public Vector2 MyDestination;
 
     public EnergyPop m_Energy;
 
@@ -16,6 +14,8 @@ public class Pop : MonoBehaviour
     public int MetabolismRate = 50;
 
     public float Size = 1;
+
+    public float VisionDistance = 10f;
 
     public float EnergySpentPerTick 
     {
@@ -37,27 +37,20 @@ public class Pop : MonoBehaviour
 
     void Start()
     {      
-        ResetTarget();
+        //ResetTarget();
     }
 
-    public virtual void MyUpdate()
-    {
-        m_Energy.TimeTick();
-    }
+    public virtual void MyUpdate() { }
 
-    public virtual void SetDestination(){}
+    public virtual void SetDestination() { }
 
-    public Vector3 MyDestinationVector3 => new Vector3(MyDestination.x, 0f, MyDestination.y);
-
-    public virtual float DistanceFromFood() => Vector2.Distance(MyPos, MyDestination);
-
-    public virtual void ResetTarget() {}
+    public virtual float DistanceFromFood() { return float.MaxValue; }
 
     protected void CheckStatus()
     {
         if (m_Energy.EnergyEnded)
             ResetSelf();
-        if (m_Energy.EnergyHigherThan(m_gameManager.StartingFoodPop * 2)) //TESTING
+        if (m_Energy.EnergyHigherThan(m_gameManager.StartingFoodPop * 2))
         {
             m_Energy.DecreaseEnergyBy(m_gameManager.StartingFoodPop);
             m_gameManager.SpawnEgg(this);
@@ -68,7 +61,6 @@ public class Pop : MonoBehaviour
     {
         m_gameManager.AvailableBiomassIncreaseBy(m_Energy.Energy);
         m_Energy.ResetValues(m_gameManager.StartingFoodPop, Random.Range(11, 15));
-        MyDestination = Vector2.zero;
 
         transform.localScale = new Vector3(1, 1, 1);
         Size = 1;

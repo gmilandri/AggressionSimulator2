@@ -2,28 +2,50 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Dove : Pop
-{
+public class Dove : Pop {
+
+    GameObject m_previousTarget;
+    GameObject m_target;
+
+    bool dangerClose;
+
     public override void MyUpdate()
     {
-        base.MyUpdate();
+        Vector3 forward = transform.TransformDirection(Vector3.forward) * VisionDistance;
+        Debug.DrawRay(transform.position, forward, Color.red);
 
-        MyPos = new Vector2(transform.position.x, transform.position.z);
+        m_Energy.TimeTick();
 
-        if (m_gameManager.DoveGenerosity)
-            GiveFood();
+        Debug.Log(gameObject.name + " is determining his target.");
+        DetermineTarget();
 
-        if (DistanceFromFood() < 1f)
+        if (HasSafeTarget() && TargetHasChanged)
         {
+            Debug.Log(gameObject.name + " has found a new target and set his destination to such target.");
+            m_agent.SetDestination(m_target.transform.position);
+        }
 
+        if (HasSafeTarget() && DistanceFromFood() < 1f)
+        {
+            Debug.Log(gameObject.name + " is close to target and ate it.");
             float totalEnergyFromEatenFood = GameManager.Instance.FoodPerBamboo;
             float totalEnergyToDove = totalEnergyFromEatenFood / 100 * MetabolismRate;
             m_Energy.IncreaseEnergyBy(totalEnergyToDove);
             m_gameManager.AvailableBiomassIncreaseBy(totalEnergyFromEatenFood - totalEnergyToDove);
 
-            ResetTarget();
-            EventManager.Instance.OnFoodEaten.Invoke(MyDestination);
+            DespawnFoodAndResetMyTarget();
         }
+
+        if (!HasSafeTarget() && !m_agent.hasPath)
+        {
+            dangerClose = false;
+            TargetRandomSpot();
+        }
+
+        /// RAYCAST IN FRONT OF POP
+        /// IF RAY HITS FOOD
+        /// SET IT AS TARGET AND START MOVING TOWARDS IT
+        /// IF TARGET IS CLOSE, EAT IT!
 
         if (m_Energy.CountdownHasEnded)
         {
@@ -31,19 +53,6 @@ public class Dove : Pop
             m_Energy.ResetCountdown();
             CheckStatus();
         }
-    }
-
-    public override void SetDestination()
-    {
-        MyDestination = m_gameManager.ClosestFoodDestination(MyPos);
-        m_agent.SetDestination(MyDestinationVector3);
-    }
-
-    public override void ResetTarget()
-    {
-        MyDestination = Vector2.zero;
-        MyPos = new Vector2(transform.position.x, transform.position.z);
-        SetDestination();
     }
 
     public void GiveFood()
@@ -73,6 +82,81 @@ public class Dove : Pop
                 }
             }
         }
+    }
+
+    private GameObject ClosestTarget ()
+    {
+        //if (m_gameManager.DoveGenerosity)
+        //    GiveFood();
+
+        RaycastHit hit;
+
+        if (Physics.Raycast(transform.position, transform.forward, out hit, maxDistance: VisionDistance))
+        {
+            if (hit.collider.gameObject.CompareTag("Hawk"))
+            {
+                dangerClose = true;
+                Debug.Log(gameObject.name + " has an hawk in front of him!");
+            }
+            if (hit.collider.gameObject.CompareTag("Food"))
+            {
+                return hit.collider.gameObject;
+            }          
+        }
+        return null;
+    }
+
+    private void DetermineTarget()
+    {
+        m_previousTarget = m_target;
+        m_target = ClosestTarget();
+    }
+
+    private bool HasSafeTarget()
+    {
+        if (m_target == null)
+            return false;
+        if (!m_target.activeSelf)
+            return false;
+        if (dangerClose)
+            return false;
+        return true;
+    }
+
+    private bool TargetHasChanged => m_previousTarget == m_target ? false : true;
+
+    public override float DistanceFromFood() => Vector3.Distance(transform.position, m_target.transform.position);
+
+    private void DespawnFoodAndResetMyTarget()
+    {
+        Debug.Log("Food was despawned.");
+        m_target.SetActive(false);
+        ResetTarget();
+    }
+
+    public void ResetTarget()
+    {
+        Debug.Log(gameObject.name + " target has been reset.");
+        m_previousTarget = m_target;
+        m_target = null;
+        m_agent.ResetPath();
+    }
+
+    private void TargetRandomSpot()
+    {
+        Debug.Log(gameObject.name + " is targeting a random spot.");
+
+        bool foundSpot = false;
+        Vector3 tempDest = Vector3.zero;
+
+        while (!foundSpot)
+        {
+            var randomX = Random.Range(-5f, 5f);
+            var randomZ = Random.Range(-5f, 5f);
+            tempDest = new Vector3(transform.position.x + randomX, transform.position.y, transform.position.z + randomZ);
+            foundSpot = m_gameManager.IsDestinationOnFloor(tempDest);
+        }
+        m_agent.SetDestination(tempDest);
     }
 
 }
